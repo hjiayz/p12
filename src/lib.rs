@@ -4,42 +4,29 @@
 //!
 
 use getrandom::getrandom;
-use lazy_static::lazy_static;
-use yasna::{models::ObjectIdentifier, ASN1Error, ASN1ErrorKind, BERReader, DERWriter, Tag};
+use yasna::{ASN1Error, ASN1ErrorKind, BERReader, DERWriter, Tag};
 
+use const_oid::ObjectIdentifier;
 use hmac::{Hmac, Mac, NewMac};
 use sha1::{Digest, Sha1};
 
 type HmacSha1 = Hmac<Sha1>;
 
-fn as_oid(s: &'static [u64]) -> ObjectIdentifier {
-    ObjectIdentifier::from_slice(s)
-}
-
-lazy_static! {
-    static ref OID_DATA_CONTENT_TYPE: ObjectIdentifier = as_oid(&[1, 2, 840, 113_549, 1, 7, 1]);
-    static ref OID_ENCRYPTED_DATA_CONTENT_TYPE: ObjectIdentifier =
-        as_oid(&[1, 2, 840, 113_549, 1, 7, 6]);
-    static ref OID_FRIENDLY_NAME: ObjectIdentifier = as_oid(&[1, 2, 840, 113_549, 1, 9, 20]);
-    static ref OID_LOCAL_KEY_ID: ObjectIdentifier = as_oid(&[1, 2, 840, 113_549, 1, 9, 21]);
-    static ref OID_CERT_TYPE_X509_CERTIFICATE: ObjectIdentifier =
-        as_oid(&[1, 2, 840, 113_549, 1, 9, 22, 1]);
-    static ref OID_CERT_TYPE_SDSI_CERTIFICATE: ObjectIdentifier =
-        as_oid(&[1, 2, 840, 113_549, 1, 9, 22, 2]);
-    static ref OID_PBE_WITH_SHA_AND3_KEY_TRIPLE_DESCBC: ObjectIdentifier =
-        as_oid(&[1, 2, 840, 113_549, 1, 12, 1, 3]);
-    static ref OID_SHA1: ObjectIdentifier = as_oid(&[1, 3, 14, 3, 2, 26]);
-    static ref OID_PBE_WITH_SHA1_AND40_BIT_RC2_CBC: ObjectIdentifier =
-        as_oid(&[1, 2, 840, 113_549, 1, 12, 1, 6]);
-    static ref OID_KEY_BAG: ObjectIdentifier = as_oid(&[1, 2, 840, 113_549, 1, 12, 10, 1, 1]);
-    static ref OID_PKCS8_SHROUDED_KEY_BAG: ObjectIdentifier =
-        as_oid(&[1, 2, 840, 113_549, 1, 12, 10, 1, 2]);
-    static ref OID_CERT_BAG: ObjectIdentifier = as_oid(&[1, 2, 840, 113_549, 1, 12, 10, 1, 3]);
-    static ref OID_CRL_BAG: ObjectIdentifier = as_oid(&[1, 2, 840, 113_549, 1, 12, 10, 1, 4]);
-    static ref OID_SECRET_BAG: ObjectIdentifier = as_oid(&[1, 2, 840, 113_549, 1, 12, 10, 1, 5]);
-    static ref OID_SAFE_CONTENTS_BAG: ObjectIdentifier =
-        as_oid(&[1, 2, 840, 113_549, 1, 12, 10, 1, 6]);
-}
+const OID_DATA_CONTENT_TYPE: ObjectIdentifier = ObjectIdentifier::new("1.2.840.113_549.1.7.1");
+const OID_ENCRYPTED_DATA_CONTENT_TYPE: ObjectIdentifier = ObjectIdentifier::new("1.2.840.113_549.1.7.6");
+const OID_FRIENDLY_NAME: ObjectIdentifier = ObjectIdentifier::new("1.2.840.113_549.1.9.20");
+const OID_LOCAL_KEY_ID: ObjectIdentifier = ObjectIdentifier::new("1.2.840.113_549.1.9.21");
+const OID_CERT_TYPE_X509_CERTIFICATE: ObjectIdentifier = ObjectIdentifier::new("1.2.840.113_549.1.9.22.1");
+const OID_CERT_TYPE_SDSI_CERTIFICATE: ObjectIdentifier = ObjectIdentifier::new("1.2.840.113_549.1.9.22.2");
+const OID_PBE_WITH_SHA_AND3_KEY_TRIPLE_DESCBC: ObjectIdentifier = ObjectIdentifier::new("1.2.840.113_549.1.12.1.3");
+const OID_SHA1: ObjectIdentifier = ObjectIdentifier::new("1.3.14.3.2.26");
+const OID_PBE_WITH_SHA1_AND40_BIT_RC2_CBC: ObjectIdentifier = ObjectIdentifier::new("1.2.840.113_549.1.12.1.6");
+const OID_KEY_BAG: ObjectIdentifier = ObjectIdentifier::new("1.2.840.113_549.1.12.10.1.1");
+const OID_PKCS8_SHROUDED_KEY_BAG: ObjectIdentifier = ObjectIdentifier::new("1.2.840.113_549.1.12.10.1.2");
+const OID_CERT_BAG: ObjectIdentifier = ObjectIdentifier::new("1.2.840.113_549.1.12.10.1.3");
+const OID_CRL_BAG: ObjectIdentifier = ObjectIdentifier::new("1.2.840.113_549.1.12.10.1.4");
+const OID_SECRET_BAG: ObjectIdentifier = ObjectIdentifier::new("1.2.840.113_549.1.12.10.1.5");
+const OID_SAFE_CONTENTS_BAG: ObjectIdentifier = ObjectIdentifier::new("1.2.840.113_549.1.12.10.1.6");
 
 const ITERATIONS: u64 = 2048;
 
