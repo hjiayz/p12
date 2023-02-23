@@ -13,11 +13,15 @@ rust-version = "1.56.0"
 
 [dependencies]
 des = "^0.8"
+aes = "^0.8"
 getrandom = "^0.2"
 hmac = "^0.12"
 lazy_static = "^1.4"
 rc2 = "^0.8"
 sha1 = "^0.10"
+pbkdf2 = {version = "0.11.0" }
+password-hash = {version = "0.4.0"}
+block-padding = "0.3.2"
 
 [dependencies.cbc]
 version = "^0.1"
