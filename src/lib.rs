@@ -477,7 +477,11 @@ impl MacData {
     pub fn verify_mac(&self, data: &[u8], password: &str) -> bool {
         debug_assert_eq!(self.mac.digest_algorithm, AlgorithmIdentifier::Sha1);
         let key = pbepkcs12sha1(password, &self.salt, self.iterations as u64, 3, 20);
-        let mut mac = HmacSha1::new_from_slice(&key).unwrap();
+        let mac = HmacSha1::new_from_slice(&key);
+        if mac.is_err() {
+            return false;
+        }
+        let mut mac = mac.unwrap();
         mac.update(data);
         mac.verify_slice(&self.mac.digest).is_ok()
     }
@@ -821,11 +825,10 @@ fn pbe_pkcs5_scheme_2(data: &[u8], password: &str, param: &Pkcs5Pbes2Params) -> 
                     rounds: param.iterations as u32,
                     output_length: key_len,
                 },
-                SaltString::b64_encode(&param.salt).unwrap().as_salt(),
+                SaltString::b64_encode(&param.salt).ok()?.as_salt(),
             )
-            .unwrap()
-            .hash
-            .unwrap()
+            .ok()?
+            .hash?
     } else {
         return None;
     };
@@ -833,15 +836,15 @@ fn pbe_pkcs5_scheme_2(data: &[u8], password: &str, param: &Pkcs5Pbes2Params) -> 
     // decrypt
     let res = if param.cipher.eq(&OID_AES256_CBC) {
         let d = Aes256CbcDec::new(key.as_bytes().into(), param.iv.as_slice().into());
-        let r = d.decrypt_padded_vec_mut::<Pkcs7>(data).unwrap();
+        let r = d.decrypt_padded_vec_mut::<Pkcs7>(data).ok()?;
         r
     } else if param.hasher.eq(&OID_AES192_CBC) {
         let d = Aes192CbcDec::new(key.as_bytes().into(), param.iv.as_slice().into());
-        let r = d.decrypt_padded_vec_mut::<Pkcs7>(data).unwrap();
+        let r = d.decrypt_padded_vec_mut::<Pkcs7>(data).ok()?;
         r
     } else if param.hasher.eq(&OID_AES128_CBC) {
         let d = Aes128CbcDec::new(key.as_bytes().into(), param.iv.as_slice().into());
-        let r = d.decrypt_padded_vec_mut::<Pkcs7>(data).unwrap();
+        let r = d.decrypt_padded_vec_mut::<Pkcs7>(data).ok()?;
         r
     } else {
         return None;
@@ -882,11 +885,10 @@ fn _pbe_pkcs5_scheme_2_encrypt(
                     rounds: param.iterations as u32,
                     output_length: key_len,
                 },
-                SaltString::b64_encode(&param.salt).unwrap().as_salt(),
+                SaltString::b64_encode(&param.salt).ok()?.as_salt(),
             )
-            .unwrap()
-            .hash
-            .unwrap()
+            .ok()?
+            .hash?
     } else {
         return None;
     };
