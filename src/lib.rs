@@ -53,6 +53,7 @@ lazy_static! {
     static ref OID_AES192_CBC: ObjectIdentifier = as_oid(&[2, 16, 840, 1, 101, 3, 4, 1, 22]);
     static ref OID_AES128_CBC: ObjectIdentifier = as_oid(&[2, 16, 840, 1, 101, 3, 4, 1, 2]);
     static ref OID_HMAC_WITH_SHA256: ObjectIdentifier = as_oid(&[1, 2, 840, 113_549, 2, 9]);
+    static ref OID_HMAC_WITH_SHA1: ObjectIdentifier = as_oid(&[1, 2, 840, 113_549, 2, 7]);
 }
 
 const ITERATIONS: u64 = 2048;
@@ -279,11 +280,16 @@ impl Pkcs5Pbes2Params {
                 let (salt, iterations, hasher_oid) = r.next().read_sequence(|r| {
                     let salt = r.next().read_bytes()?;
                     let iterations = r.next().read_u64()?;
-                    let hasher_oid = r.next().read_sequence(|r| {
-                        let hasher_oid = r.next().read_oid()?;
-                        r.next().read_null()?;
-                        Ok(hasher_oid)
-                    })?;
+                    let hasher_oid = r
+                        .read_optional(|r| {
+                            r.read_sequence(|r| {
+                                let hasher_oid = r.next().read_oid()?;
+                                r.next().read_null()?;
+                                Ok(hasher_oid)
+                            })
+                        })?
+                        .unwrap_or(OID_HMAC_WITH_SHA1.clone());
+
                     Ok((salt, iterations, hasher_oid))
                 })?;
                 Ok((kdf_oid, salt, iterations, hasher_oid))
@@ -805,9 +811,9 @@ fn pbe_pkcs5_scheme_2(data: &[u8], password: &str, param: &Pkcs5Pbes2Params) -> 
     //compute key length
     let key_len = if param.cipher.eq(&OID_AES256_CBC) {
         256 / 8
-    } else if param.hasher.eq(&OID_AES192_CBC) {
+    } else if param.cipher.eq(&OID_AES192_CBC) {
         192 / 8
-    } else if param.hasher.eq(&OID_AES128_CBC) {
+    } else if param.cipher.eq(&OID_AES128_CBC) {
         128 / 8
     } else {
         return None;
@@ -829,20 +835,52 @@ fn pbe_pkcs5_scheme_2(data: &[u8], password: &str, param: &Pkcs5Pbes2Params) -> 
             )
             .ok()?
             .hash?
+    } else if param.hasher.eq(&OID_HMAC_WITH_SHA1) {
+        Pbkdf2
+            .hash_password_customized(
+                password.as_bytes(),
+                Some(Algorithm::Pbkdf2Sha1.ident()),
+                None,
+                Params {
+                    rounds: param.iterations as u32,
+                    output_length: key_len,
+                },
+                SaltString::b64_encode(&param.salt).ok()?.as_salt(),
+            )
+            .ok()?
+            .hash?
     } else {
         return None;
     };
+
+    // let key = if param.hasher.eq(&OID_HMAC_WITH_SHA256) {
+    //     Pbkdf2
+    //         .hash_password_customized(
+    //             password.as_bytes(),
+    //             Some(Algorithm::Pbkdf2Sha256.ident()),
+    //             None,
+    //             Params {
+    //                 rounds: param.iterations as u32,
+    //                 output_length: key_len,
+    //             },
+    //             SaltString::b64_encode(&param.salt).ok()?.as_salt(),
+    //         )
+    //         .ok()?
+    //         .hash?
+    // } else {
+    //     return None;
+    // };
 
     // decrypt
     let res = if param.cipher.eq(&OID_AES256_CBC) {
         let d = Aes256CbcDec::new(key.as_bytes().into(), param.iv.as_slice().into());
         let r = d.decrypt_padded_vec_mut::<Pkcs7>(data).ok()?;
         r
-    } else if param.hasher.eq(&OID_AES192_CBC) {
+    } else if param.cipher.eq(&OID_AES192_CBC) {
         let d = Aes192CbcDec::new(key.as_bytes().into(), param.iv.as_slice().into());
         let r = d.decrypt_padded_vec_mut::<Pkcs7>(data).ok()?;
         r
-    } else if param.hasher.eq(&OID_AES128_CBC) {
+    } else if param.cipher.eq(&OID_AES128_CBC) {
         let d = Aes128CbcDec::new(key.as_bytes().into(), param.iv.as_slice().into());
         let r = d.decrypt_padded_vec_mut::<Pkcs7>(data).ok()?;
         r
