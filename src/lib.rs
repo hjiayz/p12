@@ -494,7 +494,7 @@ impl PFX {
     }
 
     pub fn parse(bytes: &[u8]) -> Result<PFX, ASN1Error> {
-        yasna::parse_der(bytes, |r| {
+        yasna::parse_ber(bytes, |r| {
             r.read_sequence(|r| {
                 let version = r.next().read_u8()?;
                 let auth_safe = ContentInfo::parse(r.next())?;
@@ -529,7 +529,7 @@ impl PFX {
             .data(&password)
             .ok_or_else(|| ASN1Error::new(ASN1ErrorKind::Invalid))?;
 
-        let contents = yasna::parse_der(&data, |r| r.collect_sequence_of(ContentInfo::parse))?;
+        let contents = yasna::parse_ber(&data, |r| r.collect_sequence_of(ContentInfo::parse))?;
 
         let mut result = vec![];
         for content in contents.iter() {
@@ -537,7 +537,7 @@ impl PFX {
                 .data(&password)
                 .ok_or_else(|| ASN1Error::new(ASN1ErrorKind::Invalid))?;
 
-            let safe_bags = yasna::parse_der(&data, |r| r.collect_sequence_of(SafeBag::parse))?;
+            let safe_bags = yasna::parse_ber(&data, |r| r.collect_sequence_of(SafeBag::parse))?;
 
             for safe_bag in safe_bags.iter() {
                 result.push(safe_bag.to_owned())
